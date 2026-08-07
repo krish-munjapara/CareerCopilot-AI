@@ -1,124 +1,227 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { LogOut, User, Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { LogOut, Menu, User, ChevronDown, X } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import Logo from '@/components/ui/Logo'
+import Button from '@/components/ui/Button'
+import { cn } from '@/lib/utils'
 
-export default function Navbar() {
+interface NavbarProps {
+  variant?: 'marketing' | 'app' | 'auth'
+  onMenuClick?: () => void
+}
+
+export default function Navbar({ variant = 'marketing', onMenuClick }: NavbarProps) {
   const { user, isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false)
+      }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setMobileMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleLogout = () => {
     logout()
     navigate('/login')
+    setUserMenuOpen(false)
   }
 
-  return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-lg"></div>
-            <span className="text-xl font-bold text-gray-900">CareerCopilot AI</span>
-          </Link>
+  const navLinks = [
+    { href: '#features', label: 'Features' },
+    { href: '#how-it-works', label: 'How it works' },
+    { href: '#pricing', label: 'Pricing' },
+  ]
 
-          <div className="hidden md:flex items-center gap-6">
-            <Link to="/" className="text-gray-600 hover:text-primary-600 transition-colors">
-              Home
-            </Link>
-            {isAuthenticated && (
-              <>
-                <Link to="/dashboard" className="text-gray-600 hover:text-primary-600 transition-colors">
-                  Dashboard
-                </Link>
-                <Link to="/upload-resume" className="text-gray-600 hover:text-primary-600 transition-colors">
-                  Upload Resume
-                </Link>
-                <Link to="/upload-job" className="text-gray-600 hover:text-primary-600 transition-colors">
-                  Upload Job
-                </Link>
-              </>
+  return (
+    <header className="sticky top-0 z-50 border-b border-surface-border/50 bg-white/80 backdrop-blur-xl shadow-sm">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          <div className="flex items-center gap-3">
+            {variant === 'app' && (
+              <button
+                type="button"
+                className="rounded-xl p-2 text-ink-muted transition-all hover:bg-surface-subtle hover:text-ink lg:hidden"
+                onClick={onMenuClick}
+                aria-label="Open navigation menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
             )}
+            <Logo size={variant === 'app' ? 'sm' : 'md'} />
           </div>
 
-          <div className="hidden md:flex items-center gap-4">
-            {isAuthenticated ? (
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-gray-600" />
-                  <span className="text-sm text-gray-700">{user?.full_name}</span>
-                </div>
+          {variant === 'marketing' && (
+            <>
+              <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+                {navLinks.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="px-4 py-2 text-sm font-medium text-ink-muted transition-colors hover:text-ink hover:bg-surface-subtle rounded-xl"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+                {isAuthenticated ? (
+                  <Link
+                    to="/dashboard"
+                    className="px-4 py-2 text-sm font-medium text-ink-muted transition-colors hover:text-ink hover:bg-surface-subtle rounded-xl"
+                  >
+                    Dashboard
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      className="px-4 py-2 text-sm font-medium text-ink-muted transition-colors hover:text-ink hover:bg-surface-subtle rounded-xl"
+                    >
+                      Login
+                    </Link>
+                    <Link to="/register">
+                      <Button size="sm" variant="primary">
+                        Get Started
+                      </Button>
+                    </Link>
+                  </>
+                )}
+              </nav>
+
+              <div className="flex items-center gap-2 md:hidden">
                 <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
+                  type="button"
+                  className="rounded-xl p-2 text-ink-muted transition-all hover:bg-surface-subtle hover:text-ink"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  aria-label="Toggle menu"
+                  aria-expanded={mobileMenuOpen}
                 >
-                  <LogOut className="w-5 h-5" />
-                  <span>Logout</span>
+                  {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 </button>
               </div>
-            ) : (
-              <>
-                <Link to="/login" className="text-gray-600 hover:text-primary-600 transition-colors">
-                  Login
-                </Link>
-                <Link to="/register" className="btn-primary">
-                  Sign Up
-                </Link>
-              </>
-            )}
-          </div>
+            </>
+          )}
 
-          <button
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          {variant === 'app' && isAuthenticated && (
+            <div className="flex items-center gap-3">
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex items-center gap-2 rounded-xl border border-surface-border bg-white px-3 py-2 text-sm font-medium text-ink shadow-sm transition-all hover:shadow-md',
+                    userMenuOpen && 'ring-2 ring-primary-500 ring-offset-2'
+                  )}
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="true"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-primary text-white shadow-inner-glow">
+                    <User className="h-4 w-4" aria-hidden="true" />
+                  </div>
+                  <span className="hidden max-w-[120px] truncate sm:inline">{user?.full_name || 'User'}</span>
+                  <ChevronDown
+                    className={cn('h-4 w-4 text-ink-subtle transition-transform', userMenuOpen && 'rotate-180')}
+                    aria-hidden="true"
+                  />
+                </button>
+                {userMenuOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-56 origin-top-right animate-scale-in rounded-2xl border border-surface-border bg-white py-2 shadow-elevated"
+                    role="menu"
+                  >
+                    <div className="px-4 py-3 border-b border-surface-border">
+                      <p className="text-sm font-medium text-ink">{user?.full_name || 'User'}</p>
+                      <p className="text-xs text-ink-subtle">{user?.email}</p>
+                    </div>
+                    <Link
+                      to="/profile"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-surface-subtle transition-colors"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <User className="h-4 w-4 text-ink-subtle" />
+                      Profile
+                    </Link>
+                    <Link
+                      to="/dashboard"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-surface-subtle transition-colors"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <Menu className="h-4 w-4 text-ink-subtle" />
+                      Dashboard
+                    </Link>
+                    <hr className="my-2 border-surface-border" />
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      role="menuitem"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
 
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 py-4 px-4">
-          <div className="flex flex-col gap-4">
-            <Link to="/" className="text-gray-600 hover:text-primary-600 transition-colors">
-              Home
-            </Link>
-            {isAuthenticated ? (
-              <>
-                <Link to="/dashboard" className="text-gray-600 hover:text-primary-600 transition-colors">
+        {variant === 'marketing' && mobileMenuOpen && (
+          <div
+            ref={mobileMenuRef}
+            className="md:hidden animate-fade-in-down border-t border-surface-border bg-white py-4"
+          >
+            <nav className="flex flex-col gap-2" aria-label="Mobile navigation">
+              {navLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="px-4 py-2 text-sm font-medium text-ink hover:bg-surface-subtle rounded-xl transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {link.label}
+                </a>
+              ))}
+              {isAuthenticated ? (
+                <Link
+                  to="/dashboard"
+                  className="px-4 py-2 text-sm font-medium text-ink hover:bg-surface-subtle rounded-xl transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   Dashboard
                 </Link>
-                <Link to="/upload-resume" className="text-gray-600 hover:text-primary-600 transition-colors">
-                  Upload Resume
-                </Link>
-                <Link to="/upload-job" className="text-gray-600 hover:text-primary-600 transition-colors">
-                  Upload Job
-                </Link>
-                <div className="flex items-center gap-2 text-gray-700">
-                  <User className="w-5 h-5" />
-                  <span>{user?.full_name}</span>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 text-red-600"
-                >
-                  <LogOut className="w-5 h-5" />
-                  <span>Logout</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <Link to="/login" className="text-gray-600 hover:text-primary-600 transition-colors">
-                  Login
-                </Link>
-                <Link to="/register" className="btn-primary text-center">
-                  Sign Up
-                </Link>
-              </>
-            )}
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="px-4 py-2 text-sm font-medium text-ink hover:bg-surface-subtle rounded-xl transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Login
+                  </Link>
+                  <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="primary" fullWidth size="md">
+                      Get Started
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </nav>
           </div>
-        </div>
-      )}
-    </nav>
+        )}
+      </div>
+    </header>
   )
 }

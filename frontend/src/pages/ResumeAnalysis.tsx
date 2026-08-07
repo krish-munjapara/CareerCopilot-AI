@@ -1,141 +1,186 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
-import Navbar from '@/components/layout/Navbar'
-import Sidebar from '@/components/layout/Sidebar'
-import Footer from '@/components/layout/Footer'
+import AppLayout from '@/components/layout/AppLayout'
+import PageHeader from '@/components/ui/PageHeader'
 import Card from '@/components/ui/Card'
-import { FileText, Mail, Phone, GraduationCap, Briefcase } from 'lucide-react'
+import { SkillChipList } from '@/components/ui/SkillChip'
+import { useResumeAnalysisData } from '@/hooks/useSessionData'
+import { FileText, Mail, GraduationCap, Briefcase, FolderGit2, AlertCircle, ArrowRight } from 'lucide-react'
+import { MotionStagger, MotionStaggerItem, MotionPage } from '@/components/ui/Motion'
+import Button from '@/components/ui/Button'
+import { useNavigate } from 'react-router-dom'
 
-function ResumeAnalysisContent() {
-  const navigate = useNavigate()
-  const [resumeData, setResumeData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const analysis = sessionStorage.getItem('resumeAnalysis')
-    if (!analysis) {
-      navigate('/upload-resume')
-      return
-    }
-    
-    setResumeData(JSON.parse(analysis))
-    setLoading(false)
-  }, [navigate])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex">
-          <Sidebar />
-          <main className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-          </main>
-        </div>
-        <Footer />
-      </div>
-    )
+function SectionCard({
+  icon: Icon,
+  title,
+  children,
+  color = 'primary',
+}: {
+  icon: typeof FileText
+  title: string
+  children: React.ReactNode
+  color?: 'primary' | 'secondary' | 'success' | 'warning'
+}) {
+  const colorClasses = {
+    primary: 'bg-primary-50 text-primary-600',
+    secondary: 'bg-secondary-50 text-secondary-600',
+    success: 'bg-success-50 text-success-600',
+    warning: 'bg-warning-50 text-warning-600',
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <div className="flex-1 flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-6xl mx-auto">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Resume Analysis</h1>
-            <p className="text-gray-600 mb-8">
-              Detailed breakdown of your resume content
-            </p>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <Card>
-                <div className="flex items-center gap-3 mb-4">
-                  <FileText className="w-5 h-5 text-primary-600" />
-                  <h3 className="text-xl font-semibold">Document Info</h3>
-                </div>
-                <div className="space-y-2">
-                  <p><span className="font-medium">Pages:</span> {resumeData.pages}</p>
-                  <p><span className="font-medium">Email:</span> {resumeData.email || 'Not found'}</p>
-                  <p><span className="font-medium">Phone:</span> {resumeData.phone || 'Not found'}</p>
-                </div>
-              </Card>
-
-              <Card>
-                <div className="flex items-center gap-3 mb-4">
-                  <Mail className="w-5 h-5 text-primary-600" />
-                  <h3 className="text-xl font-semibold">Contact</h3>
-                </div>
-                <div className="space-y-2">
-                  <p><span className="font-medium">Email:</span> {resumeData.email || 'Not detected'}</p>
-                  <p><span className="font-medium">Phone:</span> {resumeData.phone || 'Not detected'}</p>
-                </div>
-              </Card>
-            </div>
-
-            <Card className="mb-8">
-              <div className="flex items-center gap-3 mb-4">
-                <GraduationCap className="w-5 h-5 text.primary-600" />
-                <h3 className="text-xl font-semibold">Education</h3>
-              </div>
-              {resumeData.education.length > 0 ? (
-                <ul className="space-y-2">
-                  {resumeData.education.map((edu: string, index: number) => (
-                    <li key={index} className="p-3 bg-gray-50 rounded-lg">{edu}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500">No education section detected</p>
-              )}
-            </Card>
-
-            <Card className="mb-8">
-              <div className="flex items-center gap-3 mb-4">
-                <Briefcase className="w-5 h-5 text-primary-600" />
-                <h3 className="text-xl font-semibold">Experience</h3>
-              </div>
-              {resumeData.experience.length > 0 ? (
-                <ul className="space-y-2">
-                  {resumeData.experience.map((exp: string, index: number) => (
-                    <li key={index} className="p-3 bg-gray-50 rounded-lg">{exp}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500">No experience section detected</p>
-              )}
-            </Card>
-
-            <Card>
-              <div className="flex items-center gap-3 mb-4">
-                <FileText className="w-5 h-5 text-primary-600" />
-                <h3 className="text-xl font-semibold">Extracted Skills</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {resumeData.skills.length > 0 ? (
-                  resumeData.skills.map((skill: string) => (
-                    <span key={skill} className="px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-sm">
-                      {skill}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-gray-500">No skills detected</p>
-                )}
-              </div>
-            </Card>
-          </div>
-        </main>
+    <Card variant="elevated">
+      <div className="mb-4 flex items-center gap-3">
+        <div className={`rounded-xl p-2.5 ${colorClasses[color]}`}>
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <h3 className="text-lg font-semibold text-ink">{title}</h3>
       </div>
-      <Footer />
-    </div>
+      {children}
+    </Card>
   )
 }
 
 export default function ResumeAnalysis() {
+  const { data: resumeData, loading } = useResumeAnalysisData()
+  const navigate = useNavigate()
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <MotionPage className="mx-auto max-w-7xl">
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <FileText className="mx-auto h-12 w-12 animate-spin text-primary-600" />
+              <p className="mt-4 text-ink-muted">Loading resume analysis...</p>
+            </div>
+          </div>
+        </MotionPage>
+      </AppLayout>
+    )
+  }
+
+  if (!resumeData) {
+    return (
+      <AppLayout>
+        <MotionPage className="mx-auto max-w-7xl">
+          <PageHeader
+            badge="Parsed"
+            title="No Resume Data"
+            description="Upload a resume to see the structured analysis"
+          />
+          <Card variant="elevated" className="text-center py-12">
+            <AlertCircle className="mx-auto h-12 w-12 text-ink-subtle mb-4" />
+            <p className="text-ink-muted mb-6">No resume data found. Upload your resume to see the analysis.</p>
+            <Button onClick={() => navigate('/upload-resume')}>
+              Upload Resume
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Card>
+        </MotionPage>
+      </AppLayout>
+    )
+  }
+
   return (
-    <ProtectedRoute>
-      <ResumeAnalysisContent />
-    </ProtectedRoute>
+    <AppLayout>
+      <MotionPage className="mx-auto max-w-7xl">
+        <PageHeader
+          badge="Parsed"
+          title="Resume Analysis"
+          description="Structured breakdown extracted from your uploaded resume"
+        />
+
+        <MotionStagger className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <MotionStaggerItem>
+              <SectionCard icon={FileText} title="Document Info" color="primary">
+                <dl className="space-y-3 text-sm">
+                  <div className="flex justify-between rounded-lg bg-surface-subtle/50 px-4 py-2">
+                    <dt className="text-ink-muted">Pages</dt>
+                    <dd className="font-medium text-ink">{resumeData.pages}</dd>
+                  </div>
+                  <div className="flex justify-between rounded-lg bg-surface-subtle/50 px-4 py-2">
+                    <dt className="text-ink-muted">Email</dt>
+                    <dd className="font-medium text-ink">{resumeData.email || 'Not found'}</dd>
+                  </div>
+                  <div className="flex justify-between rounded-lg bg-surface-subtle/50 px-4 py-2">
+                    <dt className="text-ink-muted">Phone</dt>
+                    <dd className="font-medium text-ink">{resumeData.phone || 'Not found'}</dd>
+                  </div>
+                </dl>
+              </SectionCard>
+            </MotionStaggerItem>
+
+            <MotionStaggerItem>
+              <SectionCard icon={Mail} title="Contact" color="secondary">
+                <dl className="space-y-3 text-sm">
+                  <div className="rounded-lg bg-surface-subtle/50 px-4 py-2">
+                    <dt className="mb-1 text-ink-muted">Email</dt>
+                    <dd className="font-medium text-ink">{resumeData.email || 'Not detected'}</dd>
+                  </div>
+                  <div className="rounded-lg bg-surface-subtle/50 px-4 py-2">
+                    <dt className="mb-1 text-ink-muted">Phone</dt>
+                    <dd className="font-medium text-ink">{resumeData.phone || 'Not detected'}</dd>
+                  </div>
+                </dl>
+              </SectionCard>
+            </MotionStaggerItem>
+          </div>
+
+          <MotionStaggerItem>
+            <SectionCard icon={GraduationCap} title="Education" color="success">
+              {resumeData.education.length > 0 ? (
+                <ul className="space-y-2">
+                  {resumeData.education.map((edu, i) => (
+                    <li key={i} className="rounded-xl bg-surface-subtle/80 px-4 py-3 text-sm text-ink transition-colors hover:bg-surface-subtle">
+                      {edu}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-ink-subtle">No education section detected</p>
+              )}
+            </SectionCard>
+          </MotionStaggerItem>
+
+          <MotionStaggerItem>
+            <SectionCard icon={Briefcase} title="Experience" color="warning">
+              {resumeData.experience.length > 0 ? (
+                <ul className="space-y-2">
+                  {resumeData.experience.map((exp, i) => (
+                    <li key={i} className="rounded-xl bg-surface-subtle/80 px-4 py-3 text-sm text-ink transition-colors hover:bg-surface-subtle">
+                      {exp}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-ink-subtle">No experience section detected</p>
+              )}
+            </SectionCard>
+          </MotionStaggerItem>
+
+          <MotionStaggerItem>
+            <SectionCard icon={FolderGit2} title="Projects" color="secondary">
+              {resumeData.projects?.length > 0 ? (
+                <ul className="space-y-2">
+                  {resumeData.projects.map((proj, i) => (
+                    <li key={i} className="rounded-xl bg-surface-subtle/80 px-4 py-3 text-sm text-ink transition-colors hover:bg-surface-subtle">
+                      {proj}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-ink-subtle">No projects section detected</p>
+              )}
+            </SectionCard>
+          </MotionStaggerItem>
+
+          <MotionStaggerItem>
+            <SectionCard icon={FileText} title="Extracted Skills" color="primary">
+              <SkillChipList skills={resumeData.skills} variant="neutral" emptyMessage="No skills detected" />
+            </SectionCard>
+          </MotionStaggerItem>
+        </MotionStagger>
+      </MotionPage>
+    </AppLayout>
   )
 }

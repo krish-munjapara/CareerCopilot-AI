@@ -3,10 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
+import { Mail, Lock, ArrowRight } from 'lucide-react'
+import AuthLayout from '@/components/layout/AuthLayout'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
-import Navbar from '@/components/layout/Navbar'
-import Footer from '@/components/layout/Footer'
 
 interface LoginFormData {
   email: string
@@ -17,7 +17,7 @@ export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
-  
+
   const {
     register,
     handleSubmit,
@@ -28,70 +28,74 @@ export default function Login() {
     setLoading(true)
     try {
       await login(data)
-      toast.success('Login successful!')
+      toast.success('Welcome back!')
       navigate('/dashboard')
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Login failed')
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } } }
+      toast.error(err.response?.data?.detail || 'Login failed')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1 flex items-center justify-center py-12 px-4">
-        <div className="max-w-md w-full">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-            <p className="text-gray-600">Sign in to your account</p>
-          </div>
-          
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <Input
-              id="email"
-              label="Email"
-              type="email"
-              placeholder="you@example.com"
-              error={errors.email?.message}
-              {...register('email', {
-                required: 'Email is required',
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Invalid email address',
-                },
-              })}
-            />
-            
-            <Input
-              id="password"
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              error={errors.password?.message}
-              {...register('password', {
-                required: 'Password is required',
-                minLength: {
-                  value: 8,
-                  message: 'Password must be at least 8 characters',
-                },
-              })}
-            />
-            
-            <Button type="submit" className="w-full" loading={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
-            </Button>
-          </form>
-          
-          <p className="text-center mt-6 text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-              Sign up
-            </Link>
-          </p>
+    <AuthLayout title="Welcome back" subtitle="Sign in to your CareerCopilot account">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        <Input
+          id="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          required
+          leftIcon={<Mail className="h-4 w-4" />}
+          error={errors.email?.message}
+          {...register('email', {
+            required: 'Email is required',
+            pattern: {
+              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+              message: 'Invalid email address',
+            },
+          })}
+        />
+
+        <Input
+          id="password"
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="••••••••"
+          required
+          leftIcon={<Lock className="h-4 w-4" />}
+          error={errors.password?.message}
+          {...register('password', {
+            required: 'Password is required',
+            minLength: { value: 8, message: 'Password must be at least 8 characters' },
+          })}
+        />
+
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 text-sm text-ink-muted">
+            <input type="checkbox" className="rounded border-surface-border text-primary-600 focus:ring-primary-500" />
+            Remember me
+          </label>
+          <Link to="/forgot-password" className="text-sm font-medium text-primary-600 hover:text-primary-700">
+            Forgot password?
+          </Link>
         </div>
-      </main>
-      <Footer />
-    </div>
+
+        <Button type="submit" variant="primary" fullWidth loading={loading} size="lg">
+          Sign In
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-ink-muted">
+        Don&apos;t have an account?{' '}
+        <Link to="/register" className="font-semibold text-primary-600 hover:text-primary-700 hover:underline">
+          Create one
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }

@@ -1,142 +1,150 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
-import Navbar from '@/components/layout/Navbar'
-import Sidebar from '@/components/layout/Sidebar'
-import Footer from '@/components/layout/Footer'
-import ScoreCard from '@/components/ui/ScoreCard'
+import AppLayout from '@/components/layout/AppLayout'
+import PageHeader from '@/components/ui/PageHeader'
+import StatCard, { StatGrid } from '@/components/ui/StatCard'
 import Card from '@/components/ui/Card'
-import { BarChart3, Target, TrendingUp, AlertCircle } from 'lucide-react'
+import Badge from '@/components/ui/Badge'
+import { SkillChipList } from '@/components/ui/SkillChip'
+import { useAnalysisData } from '@/hooks/useSessionData'
+import { BarChart3, Target, TrendingUp, AlertCircle, Lightbulb, ArrowRight } from 'lucide-react'
+import { MotionStagger, MotionStaggerItem, MotionPage } from '@/components/ui/Motion'
+import Button from '@/components/ui/Button'
+import { useNavigate } from 'react-router-dom'
 
-function ATSResultsContent() {
+export default function ATSResults() {
+  const { data: atsData, loading } = useAnalysisData()
   const navigate = useNavigate()
-  const [atsData, setAtsData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const analysisData = sessionStorage.getItem('analysisData')
-    if (!analysisData) {
-      navigate('/upload-job')
-      return
-    }
-    
-    const data = JSON.parse(analysisData)
-    setAtsData(data)
-    setLoading(false)
-  }, [navigate])
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex">
-          <Sidebar />
-          <main className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-          </main>
-        </div>
-        <Footer />
-      </div>
+      <AppLayout>
+        <MotionPage className="mx-auto max-w-7xl">
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <BarChart3 className="mx-auto h-12 w-12 animate-spin text-primary-600" />
+              <p className="mt-4 text-ink-muted">Loading analysis results...</p>
+            </div>
+          </div>
+        </MotionPage>
+      </AppLayout>
+    )
+  }
+
+  if (!atsData) {
+    return (
+      <AppLayout>
+        <MotionPage className="mx-auto max-w-7xl">
+          <PageHeader
+            badge="Results"
+            title="No Analysis Data"
+            description="Upload a resume and job description to see your ATS analysis results"
+          />
+          <Card variant="elevated" className="text-center py-12">
+            <AlertCircle className="mx-auto h-12 w-12 text-ink-subtle mb-4" />
+            <p className="text-ink-muted mb-6">No analysis data found. Start by uploading your resume and a job description.</p>
+            <Button onClick={() => navigate('/upload-resume')}>
+              Start Analysis
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Card>
+        </MotionPage>
+      </AppLayout>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <div className="flex-1 flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-6xl mx-auto">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">ATS Analysis Results</h1>
-            <p className="text-gray-600 mb-8">
-              Your resume compatibility score with the job description
-            </p>
+    <AppLayout>
+      <MotionPage className="mx-auto max-w-7xl">
+        <PageHeader
+          badge="Results"
+          title="ATS Analysis Results"
+          description="Your resume compatibility score with the job description"
+        />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <ScoreCard
-                title="ATS Score"
-                score={Math.round(atsData.ats_score)}
-                icon={BarChart3}
-                color="primary"
-              />
-              <ScoreCard
-                title="Semantic Match"
-                score={Math.round(atsData.semantic_score)}
-                icon={Target}
-                color="secondary"
-              />
-              <ScoreCard
-                title="Skill Coverage"
-                score={Math.round(atsData.skill_coverage)}
-                icon={TrendingUp}
-                color="success"
-              />
-              <ScoreCard
-                title="Missing Skills"
-                score={atsData.missing_skills.length}
-                icon={AlertCircle}
-                color="warning"
-              />
-            </div>
+        <StatGrid className="mb-8">
+          <StatCard
+            title="ATS Score"
+            value={atsData.ats_score}
+            icon={BarChart3}
+            color="primary"
+            unit="percent"
+          />
+          <StatCard
+            title="Semantic Match"
+            value={atsData.semantic_score}
+            icon={Target}
+            color="secondary"
+            unit="percent"
+          />
+          <StatCard
+            title="Skill Coverage"
+            value={atsData.skill_coverage}
+            icon={TrendingUp}
+            color="success"
+            unit="percent"
+          />
+          <StatCard
+            title="Missing Skills"
+            value={atsData.missing_skills.length}
+            icon={AlertCircle}
+            color="warning"
+            unit="count"
+          />
+        </StatGrid>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <Card>
-                <h3 className="text-xl font-semibold mb-4">Matched Skills</h3>
-                <div className="flex flex-wrap gap-2">
-                  {atsData.matched_skills.map((skill: string) => (
-                    <span key={skill} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </Card>
+        <div className="mb-8 grid gap-6 lg:grid-cols-2">
+          <Card variant="elevated">
+            <h3 className="mb-4 text-lg font-semibold text-ink flex items-center gap-2">
+              <Target className="h-5 w-5 text-success-600" />
+              Matched Skills
+            </h3>
+            <SkillChipList skills={atsData.matched_skills} variant="matched" emptyMessage="No matched skills" />
+          </Card>
+          <Card variant="elevated">
+            <h3 className="mb-4 text-lg font-semibold text-ink flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-warning-600" />
+              Missing Skills
+            </h3>
+            <SkillChipList skills={atsData.missing_skills} variant="missing" emptyMessage="No missing skills" />
+          </Card>
+        </div>
 
-              <Card>
-                <h3 className="text-xl font-semibold mb-4">Missing Skills</h3>
-                <div className="flex flex-wrap gap-2">
-                  {atsData.missing_skills.map((skill: string) => (
-                    <span key={skill} className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </Card>
-            </div>
-
-            <Card>
-              <h3 className="text-xl font-semibold mb-4">Recommendations</h3>
-              <ul className="space-y-3">
-                {atsData.recommendations.slice(0, 5).map((rec: any, index: number) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      rec.priority === 'HIGH' ? 'bg-red-100' : rec.priority === 'MEDIUM' ? 'bg-yellow-100' : 'bg-green-100'
-                    }`}>
-                      <span className={`text-sm font-medium ${
-                        rec.priority === 'HIGH' ? 'text-red-600' : rec.priority === 'MEDIUM' ? 'text-yellow-600' : 'text-green-600'
-                    }`}>{index + 1}</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-gray-700">{rec.reason}</p>
-                      {rec.skill && (
-                        <span className="text-sm text-gray-500">Related: {rec.skill}</span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </Card>
+        <Card variant="elevated">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-ink flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-amber-600" />
+              Top Recommendations
+            </h3>
+            <Button variant="outline" size="sm" onClick={() => navigate('/recommendations')}>
+              View All
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
-        </main>
-      </div>
-      <Footer />
-    </div>
-  )
-}
-
-export default function ATSResults() {
-  return (
-    <ProtectedRoute>
-      <ATSResultsContent />
-    </ProtectedRoute>
+          <MotionStagger className="space-y-4">
+            {atsData.recommendations.slice(0, 5).map((rec, index) => (
+              <MotionStaggerItem key={`${rec.reason}-${index}`}>
+                <div className="flex gap-4 rounded-xl border border-surface-border bg-surface-subtle/40 p-4 transition-all hover:bg-surface-subtle hover:shadow-sm">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-primary text-white text-sm font-bold shadow-sm">
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      {rec.skill && <span className="font-medium text-ink">{rec.skill}</span>}
+                      <Badge
+                        variant={
+                          rec.priority === 'HIGH' ? 'danger' : rec.priority === 'MEDIUM' ? 'warning' : 'success'
+                        }
+                      >
+                        {rec.priority}
+                      </Badge>
+                    </div>
+                    <p className="text-sm leading-relaxed text-ink-muted">{rec.reason}</p>
+                  </div>
+                </div>
+              </MotionStaggerItem>
+            ))}
+          </MotionStagger>
+        </Card>
+      </MotionPage>
+    </AppLayout>
   )
 }

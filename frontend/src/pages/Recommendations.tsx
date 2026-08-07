@@ -1,128 +1,110 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
-import Navbar from '@/components/layout/Navbar'
-import Sidebar from '@/components/layout/Sidebar'
-import Footer from '@/components/layout/Footer'
-import Card from '@/components/ui/Card'
+import AppLayout from '@/components/layout/AppLayout'
+import PageHeader from '@/components/ui/PageHeader'
+import EmptyState from '@/components/ui/EmptyState'
 import RecommendationCard from '@/components/ui/RecommendationCard'
+import Card from '@/components/ui/Card'
+import { useAnalysisData } from '@/hooks/useSessionData'
+import { Sparkles, ArrowRight, AlertCircle } from 'lucide-react'
+import { MotionStagger, MotionStaggerItem, MotionPage } from '@/components/ui/Motion'
+import Button from '@/components/ui/Button'
+import { useNavigate } from 'react-router-dom'
 
-function RecommendationsContent() {
+const prioritySections = [
+  { key: 'HIGH', label: 'High Priority' },
+  { key: 'MEDIUM', label: 'Medium Priority' },
+  { key: 'LOW', label: 'Low Priority' },
+] as const
+
+export default function Recommendations() {
+  const { data, loading } = useAnalysisData()
   const navigate = useNavigate()
-  const [recommendations, setRecommendations] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const analysisData = sessionStorage.getItem('analysisData')
-    if (!analysisData) {
-      navigate('/upload-job')
-      return
-    }
-    
-    const data = JSON.parse(analysisData)
-    setRecommendations(data.recommendations)
-    setLoading(false)
-  }, [navigate])
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex">
-          <Sidebar />
-          <main className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-          </main>
-        </div>
-        <Footer />
-      </div>
+      <AppLayout>
+        <MotionPage className="mx-auto max-w-7xl">
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <Sparkles className="mx-auto h-12 w-12 animate-spin text-primary-600" />
+              <p className="mt-4 text-ink-muted">Loading recommendations...</p>
+            </div>
+          </div>
+        </MotionPage>
+      </AppLayout>
+    )
+  }
+
+  if (!data) {
+    return (
+      <AppLayout>
+        <MotionPage className="mx-auto max-w-7xl">
+          <PageHeader
+            badge="AI Insights"
+            title="No Analysis Data"
+            description="Upload a resume and job description to generate personalized recommendations"
+          />
+          <Card variant="elevated" className="text-center py-12">
+            <AlertCircle className="mx-auto h-12 w-12 text-ink-subtle mb-4" />
+            <p className="text-ink-muted mb-6">No analysis data found. Start by uploading your resume and a job description.</p>
+            <Button onClick={() => navigate('/upload-resume')}>
+              Start Analysis
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Card>
+        </MotionPage>
+      </AppLayout>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <div className="flex-1 flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Recommendations</h1>
-            <p className="text-gray-600 mb-8">
-              Personalized suggestions to improve your resume and career prospects
-            </p>
+    <AppLayout>
+      <MotionPage className="mx-auto max-w-7xl">
+        <PageHeader
+          badge="AI Insights"
+          title="Recommendations"
+          description="Personalized suggestions to improve your resume and career prospects"
+        />
 
-            {recommendations.length === 0 ? (
-              <Card>
-                <div className="text-center py-12">
-                  <p className="text-gray-600">No recommendations available. Upload a resume and job description to generate recommendations.</p>
-                </div>
-              </Card>
-            ) : (
-              <>
-                <div className="mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">High Priority</h2>
-                  <div className="space-y-4">
-                    {recommendations
-                      .filter((r) => r.priority === 'HIGH')
-                      .map((rec, index) => (
+        {data.recommendations.length === 0 ? (
+          <EmptyState
+            icon={Sparkles}
+            title="No recommendations yet"
+            description="Upload a resume and job description to generate personalized recommendations."
+            action={{ label: 'Upload Resume', to: '/upload-resume' }}
+          />
+        ) : (
+          <div className="space-y-8">
+            {prioritySections.map(({ key, label }) => {
+              const items = data.recommendations.filter((r) => r.priority === key)
+              if (items.length === 0) return null
+              return (
+                <section key={key} aria-labelledby={`rec-${key}`}>
+                  <div className="mb-4 flex items-center gap-3">
+                    <h2 id={`rec-${key}`} className="text-xl font-semibold text-ink">
+                      {label}
+                    </h2>
+                    <span className="rounded-full bg-surface-subtle px-3 py-1 text-sm font-medium text-ink-muted">
+                      {items.length}
+                    </span>
+                  </div>
+                  <MotionStagger className="space-y-4">
+                    {items.map((rec, index) => (
+                      <MotionStaggerItem key={`${key}-${index}`}>
                         <RecommendationCard
-                          key={index}
                           title={rec.skill || rec.category || 'Recommendation'}
                           description={rec.reason}
-                          type={rec.category || 'general'}
-                          priority={rec.priority.toLowerCase()}
+                          type={(rec.category as 'skill' | 'general') || 'general'}
+                          priority={rec.priority.toLowerCase() as 'high' | 'medium' | 'low'}
                         />
-                      ))}
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Medium Priority</h2>
-                  <div className="space-y-4">
-                    {recommendations
-                      .filter((r) => r.priority === 'MEDIUM')
-                      .map((rec, index) => (
-                        <RecommendationCard
-                          key={index}
-                          title={rec.skill || rec.category || 'Recommendation'}
-                          description={rec.reason}
-                          type={rec.category || 'general'}
-                          priority={rec.priority.toLowerCase()}
-                        />
-                      ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Low Priority</h2>
-                  <div className="space-y-4">
-                    {recommendations
-                      .filter((r) => r.priority === 'LOW')
-                      .map((rec, index) => (
-                        <RecommendationCard
-                          key={index}
-                          title={rec.skill || rec.category || 'Recommendation'}
-                          description={rec.reason}
-                          type={rec.category || 'general'}
-                          priority={rec.priority.toLowerCase()}
-                        />
-                      ))}
-                  </div>
-                </div>
-              </>
-            )}
+                      </MotionStaggerItem>
+                    ))}
+                  </MotionStagger>
+                </section>
+              )
+            })}
           </div>
-        </main>
-      </div>
-      <Footer />
-    </div>
-  )
-}
-
-export default function Recommendations() {
-  return (
-    <ProtectedRoute>
-      <RecommendationsContent />
-    </ProtectedRoute>
+        )}
+      </MotionPage>
+    </AppLayout>
   )
 }
