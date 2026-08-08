@@ -11,6 +11,8 @@ from app.ml.ats_engine import generate_ats_analysis
 from app.ml.recommendation_engine import generate_recommendations
 from app.ml.model_loader import get_model_name
 from app.db.mongodb import mongodb
+from app.core.jwt import get_current_active_user
+from app.models.user import UserInDB
 from bson import ObjectId
 from datetime import datetime
 
@@ -18,12 +20,13 @@ router = APIRouter()
 
 
 @router.post("/analyze", response_model=AnalysisResponse, status_code=status.HTTP_200_OK)
-async def analyze_resume_job(request: AnalysisRequest):
+async def analyze_resume_job(request: AnalysisRequest, current_user: UserInDB = Depends(get_current_active_user)):
     """
     Perform ML-based analysis of resume against job description.
     
     Args:
         request: Analysis request with resume text, job description, and parsed resume data
+        current_user: Authenticated user
     
     Returns:
         Complete analysis with ATS score, semantic similarity, skill coverage, and recommendations
@@ -131,13 +134,13 @@ async def analyze_resume_job(request: AnalysisRequest):
 
 
 @router.post("/save", status_code=status.HTTP_201_CREATED)
-async def save_analysis(request: AnalysisRequest, user_id: str = None):
+async def save_analysis(request: AnalysisRequest, current_user: UserInDB = Depends(get_current_active_user)):
     """
     Save analysis results to MongoDB.
     
     Args:
         request: Analysis request with resume text, job description, and parsed resume data
-        user_id: Optional user ID (will be extracted from JWT in production)
+        current_user: Authenticated user (user_id derived from JWT)
     
     Returns:
         Saved analysis document ID
@@ -147,11 +150,11 @@ async def save_analysis(request: AnalysisRequest, user_id: str = None):
     """
     try:
         # Perform analysis
-        analysis_response = await analyze_resume_job(request)
+        analysis_response = await analyze_resume_job(request, current_user)
         
         # Prepare document for MongoDB
         analysis_doc = {
-            "user_id": user_id,
+            "user_id": str(current_user.id),
             "resume_text": request.resume_text,
             "job_description": request.job_description,
             "ats_score": analysis_response.ats_score,
@@ -183,23 +186,23 @@ async def save_analysis(request: AnalysisRequest, user_id: str = None):
         )
 
 
-@router.get("/history/{user_id}", status_code=status.HTTP_200_OK)
-async def get_analysis_history(user_id: str):
+@router.get("/history", status_code=status.HTTP_200_OK)
+async def get_analysis_history(current_user: UserInDB = Depends(get_current_active_user)):
     """
-    Get analysis history for a user.
+    Get analysis history for the authenticated user.
     
     Args:
-        user_id: User ID
+        current_user: Authenticated user (user_id derived from JWT)
     
     Returns:
-        List of past analyses
+        List of past analyses for the authenticated user only
     
     Raises:
         HTTPException: If retrieval fails
     """
     try:
         cursor = mongodb.database.analyses.find(
-            {"user_id": user_id}
+            {"user_id": str(current_user.id)}
         ).sort("created_at", -1).limit(10)
         
         analyses = []

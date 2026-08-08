@@ -1,9 +1,15 @@
 from datetime import datetime, timedelta
 from typing import Optional
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from app.core.config import get_settings
+from app.db.mongodb import mongodb
+from app.models.user import UserInDB
 
 settings = get_settings()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -43,3 +49,71 @@ def decode_access_token(token: str) -> Optional[dict]:
         return payload
     except JWTError:
         return None
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
+    """
+    Dependency to get the current authenticated user from JWT token.
+    
+    Args:
+        token: JWT token from Authorization header
+    
+    Returns:
+        UserInDB instance if authentication successful
+    
+    Raises:
+        HTTPException: If token is invalid, expired, or user not found (401)
+        HTTPException: If user is inactive (403)
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = decode_access_token(token)
+        if payload is None:
+            raise credentials_exception
+        
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user_doc = await mongodb.database.users.find_one({"_id": user_id})
+    if user_doc is None:
+        raise credentials_exception
+    
+    user_doc["_id"] = str(user_doc["_id"])
+    user = UserInDB(**user_doc)
+    
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive"
+        )
+    
+    return user
+
+
+async def get_current_active_user(current_user: UserInDB = Depends(get_current_user)) -> UserInDB:
+    """
+    Dependency to get the current active user.
+    
+    Args:
+        current_user: User from get_current_user dependency
+    
+    Returns:
+        UserInDB instance if user is active
+    
+    Raises:
+        HTTPException: If user is inactive (403)
+    """
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive"
+        )
+    return current_user

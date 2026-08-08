@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useForm } from 'react-hook-form'
@@ -13,16 +13,70 @@ interface LoginFormData {
   password: string
 }
 
+declare global {
+  interface Window {
+    google: any
+  }
+}
+
 export default function Login() {
-  const { login } = useAuth()
+  const { login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginFormData>()
+
+  // Load Google Identity Services
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.onload = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          callback: handleGoogleCredentialResponse,
+          auto_select: false,
+        })
+        window.google.accounts.id.renderButton(
+          document.getElementById('google-signin-button'),
+          {
+            theme: 'outline',
+            size: 'large',
+            type: 'standard',
+            text: 'signin_with',
+            width: '100%',
+            logo_alignment: 'left',
+          }
+        )
+      }
+    }
+    document.body.appendChild(script)
+
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [])
+
+  const handleGoogleCredentialResponse = async (response: any) => {
+    setGoogleLoading(true)
+    try {
+      await loginWithGoogle(response.credential)
+      toast.success('Signed in with Google!')
+      navigate('/dashboard')
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } } }
+      toast.error(err.response?.data?.detail || 'Google sign-in failed')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true)
@@ -89,6 +143,23 @@ export default function Login() {
           <ArrowRight className="h-4 w-4" />
         </Button>
       </form>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-surface-border" />
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="bg-surface px-2 text-ink-muted">Or continue with</span>
+        </div>
+      </div>
+
+      <div id="google-signin-button" className="w-full">
+        {googleLoading && (
+          <div className="flex items-center justify-center py-3">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-surface-border border-t-primary-600" />
+          </div>
+        )}
+      </div>
 
       <p className="mt-6 text-center text-sm text-ink-muted">
         Don&apos;t have an account?{' '}

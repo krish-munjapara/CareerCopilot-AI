@@ -11,6 +11,10 @@ export interface RegisterCredentials {
   password: string
 }
 
+export interface GoogleAuthRequest {
+  id_token: string
+}
+
 export interface AuthResponse {
   access_token: string
   token_type: string
@@ -19,6 +23,8 @@ export interface AuthResponse {
     full_name: string
     email: string
     role: string
+    auth_provider: string
+    profile_picture?: string
   }
 }
 
@@ -33,9 +39,20 @@ export const authService = {
     return response.data
   },
 
+  async loginWithGoogle(idToken: string): Promise<AuthResponse> {
+    const response = await api.post('/auth/google', { id_token: idToken })
+    return response.data
+  },
+
+  async getCurrentUser(): Promise<AuthResponse['user']> {
+    const response = await api.get('/auth/me')
+    return response.data
+  },
+
   logout() {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    sessionStorage.clear()
   },
 
   getToken(): string | null {
@@ -49,5 +66,10 @@ export const authService = {
 
   isAuthenticated(): boolean {
     return !!this.getToken()
+  },
+
+  setAuth(authResponse: AuthResponse) {
+    localStorage.setItem('token', authResponse.access_token)
+    localStorage.setItem('user', JSON.stringify(authResponse.user))
   },
 }

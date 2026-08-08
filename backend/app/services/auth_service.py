@@ -2,10 +2,15 @@ from datetime import datetime
 from typing import Optional
 from bson import ObjectId
 from app.db.mongodb import mongodb
-from app.models.user import UserInDB, Role
-from app.schemas.user import UserCreate, UserLogin
+from app.models.user import UserInDB, Role, AuthProvider
+from app.schemas.user import UserCreate, UserLogin, GoogleAuthRequest
 from app.core.security import verify_password, get_password_hash
 from app.core.jwt import create_access_token
+from jose import jwt
+from app.core.config import get_settings
+import httpx
+
+settings = get_settings()
 
 
 class AuthService:
@@ -16,12 +21,29 @@ class AuthService:
         Retrieve a user by email from the database.
         
         Args:
-            email: User's email address
+            email: User's email address (normalized)
         
         Returns:
             UserInDB if found, None otherwise
         """
-        user_doc = await mongodb.database.users.find_one({"email": email})
+        normalized_email = email.lower().strip()
+        user_doc = await mongodb.database.users.find_one({"email": normalized_email})
+        if user_doc:
+            user_doc["_id"] = str(user_doc["_id"])
+            return UserInDB(**user_doc)
+        return None
+    
+    async def get_user_by_google_sub(self, google_sub: str) -> Optional[UserInDB]:
+        """
+        Retrieve a user by Google subject identifier.
+        
+        Args:
+            google_sub: Google account unique identifier
+        
+        Returns:
+            UserInDB if found, None otherwise
+        """
+        user_doc = await mongodb.database.users.find_one({"google_sub": google_sub})
         if user_doc:
             user_doc["_id"] = str(user_doc["_id"])
             return UserInDB(**user_doc)
@@ -40,16 +62,18 @@ class AuthService:
         Raises:
             ValueError: If email already exists
         """
-        existing_user = await self.get_user_by_email(user_data.email)
+        normalized_email = user_data.email.lower().strip()
+        existing_user = await self.get_user_by_email(normalized_email)
         if existing_user:
             raise ValueError("Email already registered")
         
         user_dict = {
             "full_name": user_data.full_name,
-            "email": user_data.email,
+            "email": normalized_email,
             "password_hash": get_password_hash(user_data.password),
             "role": Role.STUDENT,
             "is_active": True,
+            "auth_provider": AuthProvider.EMAIL,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         }
@@ -58,6 +82,113 @@ class AuthService:
         user_dict["_id"] = str(result.inserted_id)
         
         return UserInDB(**user_dict)
+    
+    async def create_google_user(self, google_sub: str, email: str, full_name: str, picture: Optional[str] = None) -> UserInDB:
+        """
+        Create a new user from Google authentication.
+        
+        Args:
+            google_sub: Google account unique identifier
+            email: User's email from Google
+            full_name: User's full name from Google
+            picture: Profile picture URL from Google
+        
+        Returns:
+            Created UserInDB instance
+        
+        Raises:
+            ValueError: If email already exists
+        """
+        normalized_email = email.lower().strip()
+        existing_user = await self.get_user_by_email(normalized_email)
+        if existing_user:
+            raise ValueError("Email already registered")
+        
+        user_dict = {
+            "full_name": full_name,
+            "email": normalized_email,
+            "password_hash": None,
+            "role": Role.STUDENT,
+            "is_active": True,
+            "auth_provider": AuthProvider.GOOGLE,
+            "google_sub": google_sub,
+            "profile_picture": picture,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        
+        result = await mongodb.database.users.insert_one(user_dict)
+        user_dict["_id"] = str(result.inserted_id)
+        
+        return UserInDB(**user_dict)
+    
+    async def link_google_account(self, user_id: str, google_sub: str, picture: Optional[str] = None) -> UserInDB:
+        """
+        Link Google account to existing email/password user.
+        
+        Args:
+            user_id: Existing user's ID
+            google_sub: Google account unique identifier
+            picture: Profile picture URL from Google
+        
+        Returns:
+            Updated UserInDB instance
+        """
+        update_data = {
+            "google_sub": google_sub,
+            "updated_at": datetime.utcnow()
+        }
+        if picture:
+            update_data["profile_picture"] = picture
+        
+        await mongodb.database.users.update_one(
+            {"_id": user_id},
+            {"$set": update_data}
+        )
+        
+        user_doc = await mongodb.database.users.find_one({"_id": user_id})
+        user_doc["_id"] = str(user_doc["_id"])
+        return UserInDB(**user_doc)
+    
+    async def verify_google_token(self, id_token: str) -> dict:
+        """
+        Verify Google ID token using Google's public keys.
+        
+        Args:
+            id_token: Google ID token from frontend
+        
+        Returns:
+            Decoded token payload if valid
+        
+        Raises:
+            ValueError: If token is invalid or verification fails
+        """
+        try:
+            # Verify token with Google
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
+                )
+                if response.status_code != 200:
+                    raise ValueError("Invalid Google token")
+                
+                token_info = response.json()
+                
+                # Verify audience matches our client ID
+                if token_info.get("aud") != settings.GOOGLE_CLIENT_ID:
+                    raise ValueError("Invalid token audience")
+                
+                # Verify issuer
+                if token_info.get("iss") not in ["accounts.google.com", "https://accounts.google.com"]:
+                    raise ValueError("Invalid token issuer")
+                
+                # Verify token is not expired
+                if token_info.get("exp", 0) < datetime.utcnow().timestamp():
+                    raise ValueError("Token expired")
+                
+                return token_info
+        except Exception as e:
+            raise ValueError(f"Google token verification failed: {str(e)}")
     
     async def authenticate_user(self, login_data: UserLogin) -> Optional[UserInDB]:
         """
@@ -72,6 +203,9 @@ class AuthService:
         user = await self.get_user_by_email(login_data.email)
         if not user:
             return None
+        
+        if not user.password_hash:
+            return None  # Google-only account
         
         if not verify_password(login_data.password, user.password_hash):
             return None
@@ -95,6 +229,15 @@ class AuthService:
         if not user:
             raise ValueError("Invalid email or password")
         
+        if not user.is_active:
+            raise ValueError("Account is inactive")
+        
+        # Update last login
+        await mongodb.database.users.update_one(
+            {"_id": user.id},
+            {"$set": {"last_login_at": datetime.utcnow()}}
+        )
+        
         access_token = create_access_token(data={"sub": str(user.id)})
         
         return {
@@ -104,7 +247,110 @@ class AuthService:
                 "id": user.id,
                 "full_name": user.full_name,
                 "email": user.email,
-                "role": user.role
+                "role": user.role,
+                "auth_provider": user.auth_provider,
+                "profile_picture": user.profile_picture
+            }
+        }
+    
+    async def login_with_google(self, google_auth: GoogleAuthRequest) -> dict:
+        """
+        Login or register user with Google authentication.
+        
+        Args:
+            google_auth: Google authentication request with ID token
+        
+        Returns:
+            Dictionary with access_token and user info
+        
+        Raises:
+            ValueError: If Google token verification fails
+        """
+        # Verify Google token
+        token_info = await self.verify_google_token(google_auth.id_token)
+        
+        google_sub = token_info.get("sub")
+        email = token_info.get("email")
+        full_name = token_info.get("name", "")
+        picture = token_info.get("picture")
+        
+        if not google_sub or not email:
+            raise ValueError("Invalid Google token: missing required fields")
+        
+        # Check if user exists by Google sub
+        user = await self.get_user_by_google_sub(google_sub)
+        
+        if user:
+            # Existing Google user - login
+            if not user.is_active:
+                raise ValueError("Account is inactive")
+            
+            # Update last login
+            await mongodb.database.users.update_one(
+                {"_id": user.id},
+                {"$set": {"last_login_at": datetime.utcnow()}}
+            )
+            
+            access_token = create_access_token(data={"sub": str(user.id)})
+            
+            return {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user": {
+                    "id": user.id,
+                    "full_name": user.full_name,
+                    "email": user.email,
+                    "role": user.role,
+                    "auth_provider": user.auth_provider,
+                    "profile_picture": user.profile_picture
+                }
+            }
+        
+        # Check if user exists by email (account linking)
+        existing_user = await self.get_user_by_email(email)
+        if existing_user:
+            # Link Google account to existing user
+            user = await self.link_google_account(existing_user.id, google_sub, picture)
+            
+            if not user.is_active:
+                raise ValueError("Account is inactive")
+            
+            # Update last login
+            await mongodb.database.users.update_one(
+                {"_id": user.id},
+                {"$set": {"last_login_at": datetime.utcnow()}}
+            )
+            
+            access_token = create_access_token(data={"sub": str(user.id)})
+            
+            return {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user": {
+                    "id": user.id,
+                    "full_name": user.full_name,
+                    "email": user.email,
+                    "role": user.role,
+                    "auth_provider": user.auth_provider,
+                    "profile_picture": user.profile_picture
+                }
+            }
+        
+        # New user - create account
+        user = await self.create_google_user(google_sub, email, full_name, picture)
+        
+        access_token = create_access_token(data={"sub": str(user.id)})
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "full_name": user.full_name,
+                "email": user.email,
+                "role": user.role,
+                "auth_provider": user.auth_provider,
+                "profile_picture": user.profile_picture
             }
         }
 

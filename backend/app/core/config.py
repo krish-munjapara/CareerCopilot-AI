@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     DATABASE_NAME: str = "careercopilot_ai"
     JWT_SECRET_KEY: str = "your-secret-key-change-this-in-production"
     JWT_ALGORITHM: str = "HS256"
+    GOOGLE_CLIENT_ID: str = ""
 
     class Config:
         env_file = ".env"

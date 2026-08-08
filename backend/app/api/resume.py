@@ -1,16 +1,19 @@
-from fastapi import APIRouter, UploadFile, HTTPException, status
+from fastapi import APIRouter, UploadFile, HTTPException, status, Depends
 from app.services.resume_service import resume_service
+from app.core.jwt import get_current_active_user
+from app.models.user import UserInDB
 
 router = APIRouter()
 
 
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
-async def upload_resume(file: UploadFile):
+async def upload_resume(file: UploadFile, current_user: UserInDB = Depends(get_current_active_user)):
     """
     Upload a resume PDF file.
     
     Args:
         file: PDF file to upload (max 5 MB)
+        current_user: Authenticated user
     
     Returns:
         Upload confirmation with filename and metadata

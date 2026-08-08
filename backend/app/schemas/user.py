@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
@@ -7,6 +8,12 @@ class Role(str, Enum):
     """User role enumeration for access control."""
     STUDENT = "student"
     ADMIN = "admin"
+
+
+class AuthProvider(str, Enum):
+    """Authentication provider enumeration."""
+    EMAIL = "email"
+    GOOGLE = "google"
 
 
 class UserCreate(BaseModel):
@@ -54,6 +61,18 @@ class UserLogin(BaseModel):
     password: str
 
 
+class GoogleAuthRequest(BaseModel):
+    """
+    Schema for Google authentication requests.
+    
+    This model validates the Google ID token received from the frontend.
+    
+    Fields:
+        id_token: Google ID token from Google Identity Services
+    """
+    id_token: str
+
+
 class UserResponse(BaseModel):
     """
     Schema for user data in API responses.
@@ -67,15 +86,20 @@ class UserResponse(BaseModel):
         full_name: User's full name
         email: User's email address
         role: User's role (student or admin)
+        auth_provider: Authentication provider
+        profile_picture: URL to profile picture
         created_at: Account creation timestamp
     
     Security:
         - Excludes password_hash
         - Excludes is_active (internal use)
         - Excludes updated_at (internal use)
+        - Excludes google_sub (internal use)
     """
     id: str
     full_name: str
     email: EmailStr
     role: Role
+    auth_provider: AuthProvider
+    profile_picture: Optional[str] = None
     created_at: datetime

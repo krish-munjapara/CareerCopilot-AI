@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, UploadFile
+from fastapi import APIRouter, HTTPException, status, UploadFile, Depends
 from app.schemas.ai import (
     ATSResponse,
     ResumeAnalysisResponse,
@@ -9,17 +9,20 @@ from app.schemas.ai import (
 from app.ai.engine import ai_engine
 from app.services.resume_service import resume_service
 from app.services.job_service import job_service
+from app.core.jwt import get_current_active_user
+from app.models.user import UserInDB
 
 router = APIRouter()
 
 
 @router.post("/analyze-resume", response_model=ResumeAnalysisResponse)
-async def analyze_resume(file: UploadFile):
+async def analyze_resume(file: UploadFile, current_user: UserInDB = Depends(get_current_active_user)):
     """
     Upload and analyze a resume PDF.
     
     Args:
         file: Resume PDF file to analyze
+        current_user: Authenticated user
     
     Returns:
         Complete resume analysis with extracted information
@@ -59,12 +62,13 @@ async def analyze_resume(file: UploadFile):
 
 
 @router.post("/analyze-job", response_model=JobAnalysisResponse)
-async def analyze_job(job_description: dict):
+async def analyze_job(job_description: dict, current_user: UserInDB = Depends(get_current_active_user)):
     """
     Analyze a job description.
     
     Args:
         job_description: Dictionary with job description text
+        current_user: Authenticated user
     
     Returns:
         Complete job analysis with extracted information
@@ -99,12 +103,13 @@ async def analyze_job(job_description: dict):
 
 
 @router.post("/calculate-ats", response_model=ATSResponse)
-async def calculate_ats(request: dict):
+async def calculate_ats(request: dict, current_user: UserInDB = Depends(get_current_active_user)):
     """
     Calculate ATS compatibility score between resume and job.
     
     Args:
         request: Dictionary with resume_file_path and job_description
+        current_user: Authenticated user
     
     Returns:
         ATS scoring results with matched/missing skills and recommendations
@@ -144,12 +149,13 @@ async def calculate_ats(request: dict):
 
 
 @router.post("/match", response_model=MatchResponse)
-async def match_resume_job(request: dict):
+async def match_resume_job(request: dict, current_user: UserInDB = Depends(get_current_active_user)):
     """
     Match resume to job description with detailed analysis.
     
     Args:
         request: Dictionary with resume_file_path and job_data
+        current_user: Authenticated user
     
     Returns:
         Match analysis with gaps, strengths, and coverage
@@ -188,12 +194,13 @@ async def match_resume_job(request: dict):
 
 
 @router.post("/dashboard", response_model=DashboardResponse)
-async def get_dashboard(request: dict):
+async def get_dashboard(request: dict, current_user: UserInDB = Depends(get_current_active_user)):
     """
     Get complete dashboard analysis for resume and job.
     
     Args:
         request: Dictionary with resume_file_path and job_description
+        current_user: Authenticated user
     
     Returns:
         Complete dashboard with ATS score, resume analysis, job analysis, and match results
