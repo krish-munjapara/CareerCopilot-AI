@@ -7,6 +7,7 @@ from app.api.resume import router as resume_router
 from app.api.job import router as job_router
 from app.api.dashboard import router as dashboard_router
 from app.api.analysis import router as analysis_router
+from app.api.settings import router as settings_router
 from app.core.config import get_settings
 from app.db.mongodb import mongodb
 
@@ -45,3 +46,4 @@ app.include_router(resume_router, prefix="/resume", tags=["Resume"])
 app.include_router(job_router, prefix="/job", tags=["Job"])
 app.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
 app.include_router(analysis_router, prefix="/analysis", tags=["Analysis"])
+app.include_router(settings_router, prefix="/settings", tags=["Settings"])

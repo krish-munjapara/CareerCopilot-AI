@@ -75,12 +75,22 @@ export interface AnalysisResponse {
 }
 
 export const dashboardService = {
+  async getDashboardStatus(): Promise<any> {
+    const response = await api.get('/dashboard/status')
+    return response.data
+  },
+
   async analyzeResume(file: File): Promise<ResumeAnalysis> {
     const formData = new FormData()
     formData.append('file', file)
-    const response = await api.post('/dashboard/analyze-resume', formData, {
+    const response = await api.post('/resume/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
+    return response.data
+  },
+
+  async uploadJob(title: string, company: string, description: string): Promise<any> {
+    const response = await api.post('/job/upload', { title, company, description })
     return response.data
   },
 
@@ -131,8 +141,8 @@ export const dashboardService = {
     return response.data
   },
 
-  async getAnalysisHistory(userId: string): Promise<any> {
-    const response = await api.get(`/analysis/history/${userId}`)
+  async getAnalysisHistory(): Promise<any> {
+    const response = await api.get('/analysis/history')
     return response.data
   },
 }

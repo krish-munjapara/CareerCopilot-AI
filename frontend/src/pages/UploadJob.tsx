@@ -1,59 +1,34 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lightbulb, ArrowRight } from 'lucide-react'
+import { Lightbulb, ArrowRight, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AppLayout from '@/components/layout/AppLayout'
-import PageHeader from '@/components/ui/PageHeader'
-import Input from '@/components/ui/Input'
-import TextArea from '@/components/ui/TextArea'
 import Button from '@/components/ui/Button'
-import Card from '@/components/ui/Card'
-import TipCard from '@/components/ui/TipCard'
 import { dashboardService } from '@/services/dashboard.service'
 import { MotionPage } from '@/components/ui/Motion'
 
 export default function UploadJob() {
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
-  const [company, setCompany] = useState('')
   const [description, setDescription] = useState('')
   const [uploading, setUploading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!title || !description) {
-      toast.error('Please fill in all required fields')
-      return
-    }
-
-    if (description.length < 100) {
-      toast.error('Description must be at least 100 characters')
-      return
-    }
-
-    const resumeAnalysis = sessionStorage.getItem('resumeAnalysis')
-    if (!resumeAnalysis) {
-      toast.error('Please upload a resume first')
-      navigate('/upload-resume')
+    if (!description.trim()) {
+      toast.error('Please enter a job description')
       return
     }
 
     setUploading(true)
     try {
-      const resumeData = JSON.parse(resumeAnalysis)
-
-      const result = await dashboardService.analyze(resumeData.full_text, description, resumeData)
-
-      toast.success('Analysis completed!')
-      sessionStorage.setItem('analysisData', JSON.stringify(result))
-      sessionStorage.setItem('jobTitle', title)
-      sessionStorage.setItem('jobCompany', company)
-
-      navigate('/ats-results')
+      await dashboardService.uploadJob(title || 'Target Role', '', description)
+      toast.success('Job description saved!')
+      navigate('/analysis')
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } } }
-      toast.error(err.response?.data?.detail || 'Analysis failed')
+      toast.error(err.response?.data?.detail || 'Failed to save job description')
     } finally {
       setUploading(false)
     }
@@ -61,79 +36,88 @@ export default function UploadJob() {
 
   return (
     <AppLayout>
-      <MotionPage className="mx-auto max-w-3xl">
-        <PageHeader
-          badge="Step 2"
-          title="Upload Job Description"
-          description="Paste the full job description to run ATS scoring and skill gap analysis against your resume."
-        />
+      <MotionPage className="mx-auto max-w-4xl space-y-8 pb-12">
+        {/* Page Title & Subtitle */}
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-ink sm:text-4xl">
+            Add Job Description
+          </h1>
+          <p className="mt-2 text-base text-ink-muted sm:text-lg">
+            Enter the job description you're applying for.
+          </p>
+        </div>
 
-        <Card variant="elevated">
+        {/* Main Form Card */}
+        <div className="rounded-2xl border border-surface-border bg-white p-6 sm:p-8 shadow-card">
           <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-            <Input
-              id="title"
-              label="Job Title"
-              type="text"
-              placeholder="Senior Software Engineer"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
+            {/* Job Title Field (Optional) */}
+            <div>
+              <label htmlFor="job-title" className="mb-2 block text-sm font-semibold text-ink">
+                Job Title <span className="font-normal text-ink-subtle">(Optional)</span>
+              </label>
+              <input
+                id="job-title"
+                type="text"
+                placeholder="e.g. Software Engineer"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded-xl border border-surface-border bg-white px-4 py-3 text-ink shadow-sm transition-all placeholder:text-ink-subtle focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+              />
+            </div>
 
-            <Input
-              id="company"
-              label="Company"
-              type="text"
-              placeholder="Acme Corp (optional)"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-            />
+            {/* Job Description Textarea */}
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <label htmlFor="job-description" className="block text-sm font-semibold text-ink">
+                  Job Description <span className="text-red-500">*</span>
+                </label>
+                <span className="text-xs text-ink-subtle">
+                  {description.length}/5000
+                </span>
+              </div>
+              <textarea
+                id="job-description"
+                rows={9}
+                maxLength={5000}
+                placeholder="Paste the job description here..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                className="w-full resize-y rounded-xl border border-surface-border bg-white p-4 text-ink shadow-sm transition-all placeholder:text-ink-subtle focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 leading-relaxed text-sm sm:text-base"
+              />
+            </div>
 
-            <TextArea
-              id="description"
-              label="Job Description"
-              rows={12}
-              placeholder="Paste the complete job description here..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-              hint={`${description.length} characters · 100 minimum`}
-            />
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button type="submit" variant="primary" loading={uploading} className="flex-1" size="lg">
-                {uploading ? 'Analyzing...' : 'Run Analysis'}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+            {/* Save & Continue Button */}
+            <div className="pt-2">
               <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setTitle('')
-                  setCompany('')
-                  setDescription('')
-                }}
-                disabled={uploading}
-                size="lg"
+                type="submit"
+                variant="primary"
+                loading={uploading}
+                disabled={uploading || !description.trim()}
+                className="w-full sm:w-auto font-semibold shadow-md shadow-glow px-8 py-3 rounded-xl text-base"
               >
-                Clear
+                {uploading ? (
+                  <>
+                    <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Save & Continue
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </>
+                )}
               </Button>
             </div>
           </form>
-        </Card>
+        </div>
 
-        <div className="mt-6">
-          <TipCard
-            title="Tips for best results"
-            icon={Lightbulb}
-            variant="success"
-            tips={[
-              'Paste the complete job description including requirements',
-              'Include skills, experience, and education requirements',
-              'Longer descriptions produce more accurate analysis',
-              'Remove personal information from the description',
-            ]}
-          />
+        {/* Tip / Information Box */}
+        <div className="flex items-start gap-3.5 rounded-2xl border border-primary-100 bg-primary-50/50 p-4 sm:p-5 shadow-sm">
+          <Lightbulb className="h-5 w-5 text-primary-600 shrink-0 mt-0.5" />
+          <p className="text-sm font-medium text-ink-muted leading-relaxed">
+            <strong className="font-semibold text-ink">Tip:</strong> A detailed job description helps us provide more accurate analysis and recommendations.
+          </p>
         </div>
       </MotionPage>
     </AppLayout>

@@ -43,7 +43,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
             className={cn(
-              'w-full rounded-xl px-4 py-2.5 text-ink shadow-sm transition-all placeholder:text-ink-subtle focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20',
+              'w-full rounded-xl px-4 py-3 text-ink shadow-sm transition-all placeholder:text-ink-subtle focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20',
               variantStyles[variant],
               leftIcon && 'pl-10',
               rightIcon && 'pr-10',

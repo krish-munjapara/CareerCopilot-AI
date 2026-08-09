@@ -16,10 +16,10 @@ interface UploadAreaProps {
 export default function UploadArea({
   onFileSelect,
   onFileRemove,
-  accept = '.pdf',
-  maxSize = 5 * 1024 * 1024,
-  label = 'Drop your file here or click to upload',
-  description = 'PDF only · Max 5MB',
+  accept = '.pdf,.docx,.doc',
+  maxSize = 10 * 1024 * 1024,
+  label = 'Drag & drop your file here',
+  description = 'PDF, DOCX • Max 10MB',
   selectedFile,
   variant = 'default',
 }: UploadAreaProps) {
@@ -40,7 +40,7 @@ export default function UploadArea({
       const acceptedTypes = accept.split(',').map((t) => t.trim().toLowerCase())
       const ext = '.' + file.name.split('.').pop()?.toLowerCase()
       if (acceptedTypes.length && !acceptedTypes.some((t) => t === ext || file.type.includes(t.replace('.', '')))) {
-        setError('Invalid file type. Please upload a PDF.')
+        setError('Invalid file type. Please upload a PDF or DOCX file.')
         return
       }
 

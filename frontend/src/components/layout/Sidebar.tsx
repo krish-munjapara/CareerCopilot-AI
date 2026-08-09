@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, Home, FileText, Upload, BarChart3, Target, TrendingUp, User } from 'lucide-react'
+import { X, Home, FileText, Upload, BarChart3, Target, TrendingUp, User, Settings, HelpCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
 
@@ -9,7 +9,7 @@ interface SidebarProps {
   onMobileClose?: () => void
 }
 
-const navigation = [
+const mainNavigation = [
   {
     title: 'Dashboard',
     path: '/dashboard',
@@ -25,6 +25,9 @@ const navigation = [
     path: '/upload-job',
     icon: FileText,
   },
+]
+
+const analysisNavigation = [
   {
     title: 'ATS Results',
     path: '/ats-results',
@@ -45,53 +48,85 @@ const navigation = [
     path: '/recommendations',
     icon: TrendingUp,
   },
+]
+
+const bottomNavigation = [
   {
     title: 'Profile',
     path: '/profile',
     icon: User,
+  },
+  {
+    title: 'Settings',
+    path: '/settings',
+    icon: Settings,
+  },
+  {
+    title: 'Help & Support',
+    path: '/help',
+    icon: HelpCircle,
   },
 ]
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation()
 
+  const renderNavItem = (item: any) => {
+    const Icon = item.icon
+    const isActive = location.pathname === item.path
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={onNavigate}
+        className={cn(
+          'group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200',
+          isActive
+            ? 'bg-gradient-primary text-white shadow-md shadow-glow'
+            : 'text-ink-muted hover:bg-surface-subtle hover:text-ink'
+        )}
+        aria-current={isActive ? 'page' : undefined}
+      >
+        <Icon
+          className={cn(
+            'h-5 w-5 shrink-0 transition-colors',
+            isActive ? 'text-white' : 'text-ink-subtle group-hover:text-ink-muted'
+          )}
+          aria-hidden="true"
+        />
+        <span className="truncate">{item.title}</span>
+        {isActive && (
+          <motion.div
+            layoutId="activeIndicator"
+            className="ml-auto h-2 w-2 rounded-full bg-white"
+            initial={false}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          />
+        )}
+      </Link>
+    )
+  }
+
   return (
-    <nav className="flex flex-col gap-2" aria-label="App navigation">
-      {navigation.map((item) => {
-        const Icon = item.icon
-        const isActive = location.pathname === item.path
-        return (
-          <Link
-            key={item.path}
-            to={item.path}
-            onClick={onNavigate}
-            className={cn(
-              'group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200',
-              isActive
-                ? 'bg-gradient-primary text-white shadow-md shadow-glow'
-                : 'text-ink-muted hover:bg-surface-subtle hover:text-ink'
-            )}
-            aria-current={isActive ? 'page' : undefined}
-          >
-            <Icon
-              className={cn(
-                'h-5 w-5 shrink-0 transition-colors',
-                isActive ? 'text-white' : 'text-ink-subtle group-hover:text-ink-muted'
-              )}
-              aria-hidden="true"
-            />
-            <span className="truncate">{item.title}</span>
-            {isActive && (
-              <motion.div
-                layoutId="activeIndicator"
-                className="ml-auto h-2 w-2 rounded-full bg-white"
-                initial={false}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              />
-            )}
-          </Link>
-        )
-      })}
+    <nav className="flex flex-col gap-6" aria-label="App navigation">
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-subtle">Main Menu</p>
+        <div className="flex flex-col gap-2">
+          {mainNavigation.map(renderNavItem)}
+        </div>
+      </div>
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-subtle">Analysis</p>
+        <div className="flex flex-col gap-2">
+          {analysisNavigation.map(renderNavItem)}
+        </div>
+      </div>
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-subtle">Others</p>
+        <div className="flex flex-col gap-1.5">
+          {bottomNavigation.map(renderNavItem)}
+        </div>
+      </div>
     </nav>
   )
 }
@@ -101,9 +136,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
     <>
       <aside className="hidden w-72 shrink-0 border-r border-surface-border/50 bg-white/50 backdrop-blur-sm lg:block">
         <div className="sticky top-16 flex h-[calc(100vh-4rem)] flex-col overflow-y-auto p-6">
-          <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink-subtle">Main Menu</p>
-          </div>
           <NavContent />
         </div>
       </aside>
@@ -142,9 +174,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto p-6">
-                <div className="mb-6">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-subtle">Main Menu</p>
-                </div>
                 <NavContent onNavigate={onMobileClose} />
               </div>
             </motion.aside>

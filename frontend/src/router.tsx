@@ -8,11 +8,15 @@ import Register from '@/pages/Register'
 import Dashboard from '@/pages/Dashboard'
 import UploadResume from '@/pages/UploadResume'
 import UploadJob from '@/pages/UploadJob'
+import AnalysisProgress from '@/pages/AnalysisProgress'
 import ATSResults from '@/pages/ATSResults'
 import ResumeAnalysis from '@/pages/ResumeAnalysis'
 import SkillGap from '@/pages/SkillGap'
 import Recommendations from '@/pages/Recommendations'
 import Profile from '@/pages/Profile'
+import Settings from '@/pages/Settings'
+import Help from '@/pages/Help'
+import AnalysisHistory from '@/pages/AnalysisHistory'
 import NotFound from '@/pages/NotFound'
 
 function AppRouter() {
@@ -26,11 +30,15 @@ function AppRouter() {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/upload-resume" element={<ProtectedRoute><UploadResume /></ProtectedRoute>} />
           <Route path="/upload-job" element={<ProtectedRoute><UploadJob /></ProtectedRoute>} />
+          <Route path="/analysis" element={<ProtectedRoute><AnalysisProgress /></ProtectedRoute>} />
           <Route path="/ats-results" element={<ProtectedRoute><ATSResults /></ProtectedRoute>} />
           <Route path="/resume-analysis" element={<ProtectedRoute><ResumeAnalysis /></ProtectedRoute>} />
           <Route path="/skill-gap" element={<ProtectedRoute><SkillGap /></ProtectedRoute>} />
           <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
+          <Route path="/analysis-history" element={<ProtectedRoute><AnalysisHistory /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster

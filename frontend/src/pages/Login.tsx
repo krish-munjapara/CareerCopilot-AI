@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import { Mail, Lock, ArrowRight, Eye, EyeOff, Shield } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import AuthLayout from '@/components/layout/AuthLayout'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button'
 interface LoginFormData {
   email: string
   password: string
+  rememberMe?: boolean
 }
 
 declare global {
@@ -90,7 +91,7 @@ export default function Login() {
           callback: handleGoogleCredentialResponse,
           auto_select: false,
         })
-        
+
         const buttonElement = document.getElementById('google-signin-button')
         if (buttonElement) {
           // Clear previous button if exists
@@ -155,14 +156,14 @@ export default function Login() {
   }
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Sign in to your CareerCopilot account" showBackLink>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <AuthLayout title="Login to your account" subtitle="Enter your credentials to access your account" showBackLink>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <Input
           id="email"
-          label="Email"
+          label="Email address"
           type="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder="Enter your email"
           required
           leftIcon={<Mail className="h-4 w-4" />}
           error={errors.email?.message}
@@ -181,7 +182,7 @@ export default function Login() {
             label="Password"
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
-            placeholder="••••••••"
+            placeholder="Enter your password"
             required
             leftIcon={<Lock className="h-4 w-4" />}
             error={errors.password?.message}
@@ -192,17 +193,29 @@ export default function Login() {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-[2.3rem] text-ink-muted hover:text-ink transition-colors"
+            className="absolute right-4 top-[2.55rem] text-ink-muted hover:text-ink transition-colors"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
 
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              {...register('rememberMe')}
+              className="h-4 w-4 rounded border-surface-border text-primary-600 focus:ring-primary-600"
+            />
+            Remember me
+          </label>
+          <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700">
+            Forgot password?
+          </Link>
+        </div>
 
-        <Button type="submit" variant="primary" fullWidth disabled={loading} size="lg">
-          {loading ? 'Signing in...' : 'Sign In'}
-          {!loading && <ArrowRight className="h-4 w-4" />}
+        <Button type="submit" variant="primary" fullWidth disabled={loading} size="lg" className="font-bold py-3">
+          {loading ? 'Logging in...' : 'Login'}
         </Button>
       </form>
 
@@ -211,7 +224,7 @@ export default function Login() {
           <div className="w-full border-t border-surface-border" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="bg-surface px-2 text-ink-muted">Or continue with</span>
+          <span className="bg-white px-2 text-ink-muted">or continue with</span>
         </div>
       </div>
 
@@ -226,15 +239,10 @@ export default function Login() {
 
       <p className="mt-6 text-center text-sm text-ink-muted">
         Don&apos;t have an account?{' '}
-        <Link to="/register" className="font-semibold text-primary-600 hover:text-primary-700 hover:underline">
-          Create one
+        <Link to="/register" className="font-semibold text-primary-600 hover:text-primary-700">
+          Sign up
         </Link>
       </p>
-
-      <div className="mt-6 flex items-center justify-center gap-2 text-xs text-ink-muted">
-        <Shield className="h-3.5 w-3.5" />
-        <span>Your account is protected with secure authentication</span>
-      </div>
     </AuthLayout>
   )
 }

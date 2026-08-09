@@ -11,8 +11,60 @@ from app.services.resume_service import resume_service
 from app.services.job_service import job_service
 from app.core.jwt import get_current_active_user
 from app.models.user import UserInDB
+from app.db.mongodb import mongodb
+from datetime import datetime
+from bson import ObjectId
 
 router = APIRouter()
+
+
+@router.get("/status", status_code=status.HTTP_200_OK)
+async def get_dashboard_status(current_user: UserInDB = Depends(get_current_active_user)):
+    """
+    Get dashboard status for the authenticated user.
+    
+    Returns information about whether the user has:
+    - Resume uploaded
+    - Job description added
+    - Analysis completed
+    
+    Args:
+        current_user: Authenticated user
+    
+    Returns:
+        Dashboard status with hasResume, hasJob, hasAnalysis flags
+    """
+    try:
+        user_id_str = str(current_user.id)
+        
+        # Check for resume
+        resume = await mongodb.database.resumes.find_one({"user_id": user_id_str})
+        has_resume = resume is not None
+        
+        # Check for job
+        job = await mongodb.database.jobs.find_one({"user_id": user_id_str})
+        has_job = job is not None
+        
+        # Check for analysis
+        analysis = await mongodb.database.analyses.find_one(
+            {"user_id": user_id_str},
+            sort=[("created_at", -1)]
+        )
+        has_analysis = analysis is not None
+        
+        return {
+            "has_resume": has_resume,
+            "has_job": has_job,
+            "has_analysis": has_analysis,
+            "latest_analysis_id": str(analysis["_id"]) if analysis else None,
+            "resume_id": str(resume["_id"]) if resume else None,
+            "job_id": str(job["_id"]) if job else None
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve dashboard status: {str(e)}"
+        )
 
 
 @router.post("/analyze-resume", response_model=ResumeAnalysisResponse)
