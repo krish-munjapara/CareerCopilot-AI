@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from bson import ObjectId
 from app.core.config import get_settings
 from app.db.mongodb import mongodb
 from app.models.user import UserInDB
@@ -82,7 +83,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
     except JWTError:
         raise credentials_exception
     
-    user_doc = await mongodb.database.users.find_one({"_id": user_id})
+    # Convert string ID to ObjectId for MongoDB lookup
+    try:
+        user_id_obj = ObjectId(user_id)
+    except:
+        raise credentials_exception
+    
+    user_doc = await mongodb.database.users.find_one({"_id": user_id_obj})
     if user_doc is None:
         raise credentials_exception
     

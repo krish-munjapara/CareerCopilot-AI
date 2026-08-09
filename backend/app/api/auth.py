@@ -3,8 +3,10 @@ from app.schemas.user import UserCreate, UserLogin, GoogleAuthRequest, UserRespo
 from app.services.auth_service import auth_service
 from app.core.jwt import create_access_token, get_current_active_user
 from app.models.user import UserInDB
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -83,10 +85,13 @@ async def google_auth(google_auth: GoogleAuthRequest):
     Raises:
         HTTPException: If Google token verification fails (401)
     """
+    logger.info("POST /auth/google endpoint called")
     try:
         result = await auth_service.login_with_google(google_auth)
+        logger.info("Google authentication successful")
         return result
     except ValueError as e:
+        logger.error(f"Google authentication failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
